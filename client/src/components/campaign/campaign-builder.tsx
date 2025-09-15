@@ -1,0 +1,155 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Plus, Send } from 'lucide-react'
+import { RuleGroup } from './rule-group'
+import { AudiencePreview } from './audience-preview'
+import { createCampaign, RuleGroup as RuleGroupType, Rule } from '@/lib/api'
+import { toast } from 'sonner'
+
+export function CampaignBuilder() {
+  const router = useRouter()
+  const [campaignName, setCampaignName] = useState('')
+  const [message, setMessage] = useState('')
+  const [ruleGroups, setRuleGroups] = useState<RuleGroupType[]>([
+    {
+      rules: [{ field: 'totalSpend', operator: '>', value: 0 }],
+      connector: 'AND',
+    },
+  ])
+  const [loading, setLoading] = useState(false)
+
+  const addRuleGroup = () => {
+    const newRuleGroup: RuleGroupType = {
+      rules: [{ field: 'totalSpend', operator: '>', value: 0 }],
+      connector: 'AND',
+    }
+    setRuleGroups([...ruleGroups, newRuleGroup])
+  }
+
+  const updateRuleGroup = (index: number, ruleGroup: RuleGroupType) => {
+    const updatedGroups = [...ruleGroups]
+    updatedGroups[index] = ruleGroup
+    setRuleGroups(updatedGroups)
+  }
+
+  const deleteRuleGroup = (index: number) => {
+    if (ruleGroups.length > 1) {
+      const updatedGroups = ruleGroups.filter((_, i) => i !== index)
+      setRuleGroups(updatedGroups)
+    }
+  }
+
+  const handleSaveCampaign = async () => {
+    if (!campaignName.trim()) {
+      toast.error('Please enter a campaign name')
+      return
+    }
+
+    if (!message.trim()) {
+      toast.error('Please enter a message')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      await createCampaign({
+        name: campaignName,
+        ruleGroups,
+        message,
+      })
+
+      toast.success('Campaign created and sent successfully!')
+      router.push('/campaigns')
+    } catch (error) {
+      console.error('Failed to create campaign:', error)
+      toast.error('Failed to create campaign. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Campaign Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="campaignName">Campaign Name</Label>
+            <Input
+              id="campaignName"
+              value={campaignName}
+              onChange={(e) => setCampaignName(e.target.value)}
+              placeholder="Enter campaign name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="message">Message</Label>
+            <Textarea
+              id="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Enter your campaign message"
+              rows={4}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Audience Rules</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {ruleGroups.map((ruleGroup, index) => (
+            <div key={index}>
+              <RuleGroup
+                ruleGroup={ruleGroup}
+                onUpdate={(updatedGroup) => updateRuleGroup(index, updatedGroup)}
+                onDelete={() => deleteRuleGroup(index)}
+                canDelete={ruleGroups.length > 1}
+              />
+              {index < ruleGroups.length - 1 && (
+                <div className="flex justify-center py-4">
+                  <span className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full font-medium">
+                    OR
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+
+          <Button onClick={addRuleGroup} variant="outline" className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Rule Group
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AudiencePreview ruleGroups={ruleGroups} />
+
+      <div className="flex justify-end">
+        <Button onClick={handleSaveCampaign} disabled={loading} size="lg">
+          {loading ? (
+            'Creating...'
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Save & Send Campaign
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}

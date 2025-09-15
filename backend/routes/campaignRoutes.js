@@ -1,7 +1,13 @@
-﻿import express from "express";
+import express from "express";
+import { createCampaign, listCampaigns, campaignDetails } from "../controllers/campaignController.js";
 import CommunicationLog from "../models/CommunicationLog.js";
 
 const router = express.Router();
+
+// Campaign CRUD routes
+router.post("/", createCampaign);
+router.get("/", listCampaigns);
+router.get("/:id", campaignDetails);
 
 // GET /api/campaigns/:id/logs  -> logs for a single campaign
 router.get("/:id/logs", async (req, res) => {
