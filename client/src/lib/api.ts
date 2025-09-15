@@ -77,4 +77,9 @@ export const getCustomers = async (): Promise<Customer[]> => {
   return response.data
 }
 
+export const generateRulesFromText = async (prompt: string): Promise<{ ruleGroups: RuleGroup[] }> => {
+  const response = await api.post('/ai/generate-rules', { prompt })
+  return response.data
+}
+
 export default api
